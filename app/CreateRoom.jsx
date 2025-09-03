@@ -10,18 +10,15 @@ import {
 } from "react-native";
 import { Formik } from "formik";
 import * as Yup from "yup";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
-const TenantFormScreen = () => {
- 
-  const router = useRouter();
+const CreateRoom = () => {
 
-  // Parse tenant safely
-  let tenant = null;
-
+const router=useRouter()
+  const params = useLocalSearchParams();
+const { houseName, holdingNumber } = params;
 
   const validationSchema = Yup.object().shape({
-    name: Yup.string().required("নাম অবশ্যক"),
     room: Yup.string().required("কক্ষ নং অবশ্যক"),
     roomRent: Yup.number()
       .required("কক্ষ ভাড়া অবশ্যক")
@@ -35,190 +32,159 @@ const TenantFormScreen = () => {
     unitPrice: Yup.number()
       .required("প্রতি ইউনিট দাম অবশ্যক")
       .typeError("সঠিক সংখ্যা দিন"),
-
     housekeeping: Yup.number()
       .required("পরিষ্কার পরিচ্ছন্নতা অবশ্যক")
       .typeError("সঠিক সংখ্যা দিন"),
-    paidAmount: Yup.number()
-      .required("পরিশোধিত পরিমাণ অবশ্যক")
-      .typeError("সঠিক সংখ্যা দিন"),
   });
 
-  const calculateElectricity = (prev, curr, unit) => {
-    return (parseFloat(curr) - parseFloat(prev)) * parseFloat(unit) || 0;
+  const calculateElectricity = (prev, curr, unit) =>
+    (parseFloat(curr) - parseFloat(prev)) * parseFloat(unit) || 0;
+
+  const calculateTotal = ({ roomRent, electricity, wifi, housekeeping }) =>
+    parseFloat(roomRent || 0) +
+    parseFloat(electricity || 0) +
+    parseFloat(wifi || 0) +
+    parseFloat(housekeeping || 0);
+
+const submitRoomData = async (values) => {
+  const payload = {
+    tenant: { name: values.tenantName, phone: values.tenantPhone },
+    houseName: houseName || "",
+    holdingNumber: holdingNumber || "",
+    roomNumber: values.room,
+    currReading: parseFloat(values.currReading),
+    prevReading: parseFloat(values.prevReading),
+    roomRent: parseFloat(values.roomRent),
+    wifi: parseFloat(values.wifi || 0),
+    housekeeping: parseFloat(values.housekeeping),
+    unitPrice: parseFloat(values.unitPrice),
   };
 
-  const calculateTotal = ({
-    roomRent,
-    electricity,
-    gas,
-    wifi,
-    housekeeping,
-    paidAmount,
-  }) => {
-    const total =
-      parseFloat(roomRent || 0) +
-      parseFloat(electricity || 0) +
-      parseFloat(gas || 0) +
-      parseFloat(wifi || 0) +
-      parseFloat(housekeeping || 0);
-    return {
-      total,
-      due: total - parseFloat(paidAmount || 0),
-    };
-  };
+  console.log(payload);
 
-  const submitTenantData = async (values) => {
-    try {
-      const res = await fetch(
-        "https://house-rent-management-uc5b.vercel.app/api/tenant/update",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
-        }
-      );
-
-      const data = await res.json();
-
-      if (res.ok) {
-        Alert.alert("সফল হয়েছে", "Tenant data successfully updated!");
-        router.back();
-      } else {
-        Alert.alert("ত্রুটি", data.message || "Something went wrong");
+  try {
+    const res = await fetch(
+      "https://house-rent-management-uc5b.vercel.app/api/owner/roomCreate",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert("ত্রুটি", "Server error. Please try again.");
+    );
+
+    const text = await res.text();
+    let data = text ? JSON.parse(text) : {};
+
+    if (res.ok) {
+      Alert.alert("সফল হয়েছে", "Room created successfully!");
+      router.back();
+    } else {
+      Alert.alert("ত্রুটি", data.message || "Something went wrong");
     }
-  };
+  } catch (error) {
+    console.error(error);
+    Alert.alert("ত্রুটি", "Server error. Please try again.");
+  }
+};
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>ভাড়াটিয়ার ফর্ম</Text>
+      <Text style={styles.header}>নতুন রুম তৈরি করুন</Text>
+   <Formik
+  initialValues={{
+    room: "",
+    roomRent: "",
+    prevReading: "0",
+    currReading: "0",
+    unitPrice: "8.5",
+    wifi: "",
+    housekeeping: "",
+    tenantName: "",
+    tenantPhone: "",
+  }}
+  validationSchema={validationSchema}
+  onSubmit={submitRoomData}
+>
+  {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => {
+    const electricityCharge = calculateElectricity(
+      values.prevReading,
+      values.currReading,
+      values.unitPrice
+    );
+    const totalAmount = calculateTotal({
+      roomRent: values.roomRent,
+      electricity: electricityCharge,
+      wifi: values.wifi || 0,
+      housekeeping: values.housekeeping,
+    });
 
-      <Formik
-        initialValues={{
-          name: tenant?.name || "",
-          room: tenant?.roomNumber || "",
-          roomRent: tenant?.roomRent || "",
-          prevReading: tenant?.prevReading || "100",
-          currReading: tenant?.currReading || "",
-          unitPrice: tenant?.unitPrice || "8.5",
-          wifi: tenant?.wifi || "",
-          housekeeping: tenant?.housekeeping || "",
-          paidAmount: tenant?.paidAmount || "",
-        }}
-        validationSchema={validationSchema}
-        onSubmit={submitTenantData}
-      >
-        {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => {
-          const electricityCharge = calculateElectricity(
-            values.prevReading,
-            values.currReading,
-            values.unitPrice
-          );
-          const { total, due } = calculateTotal({
-            roomRent: values.roomRent,
-            electricity: electricityCharge,
-            wifi: values.wifi,
-            housekeeping: values.housekeeping,
-            paidAmount: values.paidAmount,
-          });
+    const renderInput = (key, label, keyboard = "default") => (
+      <View key={key} style={{ marginBottom: 12 }}>
+        <Text style={styles.label}>{label}</Text>
+        <TextInput
+          style={styles.input}
+          value={values[key]?.toString() || ""}
+          keyboardType={keyboard}
+          onChangeText={handleChange(key)}
+          onBlur={handleBlur(key)}
+        />
+        {errors[key] && touched[key] && (
+          <Text style={styles.error}>{errors[key]}</Text>
+        )}
+      </View>
+    );
 
-          const renderInput = (key, label, keyboard = "default") => (
-            <View key={key} style={{ marginBottom: 12 }}>
-              <Text style={styles.label}>{label}</Text>
-              <TextInput
-                style={styles.input}
-                value={values[key]?.toString() || ""}
-                keyboardType={keyboard}
-                onChangeText={handleChange(key)}
-                onBlur={handleBlur(key)}
-              />
-              {errors[key] && touched[key] && (
-                <Text style={styles.error}>{errors[key]}</Text>
-              )}
+    return (
+      <View>
+        {/* Tenant Info */}
+        <View style={styles.card}>
+          <Text style={styles.groupTitle}>ভাড়াটিয়া তথ্য</Text>
+          {renderInput("tenantName", "ভাড়াটিয়ার নাম")}
+          {renderInput("tenantPhone", "ভাড়াটিয়ার ফোন", "phone-pad")}
+        </View>
+
+        {/* Room Info */}
+        <View style={styles.card}>
+          <Text style={styles.groupTitle}>রুম তথ্য</Text>
+          {renderInput("room", "Room Number")}
+        </View>
+
+        {/* Electricity Info */}
+        <View style={styles.card}>
+          <Text style={styles.groupTitle}>বিদ্যুৎ বিল</Text>
+          <View style={styles.row}>
+            <View style={styles.inputHalf}>
+              <Text style={styles.label}>পূর্ববর্তী রিডিং</Text>
+              <Text style={styles.fixedValue}>{values.prevReading}</Text>
             </View>
-          );
-
-          return (
-            <View>
-              {/* Group 1: Tenant Info */}
-               <View>
-                <Text style={styles.groupTitle}>ভাড়াটিয়া তথ্য</Text>
-                {renderInput("name", "নাম")}
-                {renderInput("room", "কক্ষ")}
-               </View>
-
-         <View style={styles.card}>
-  <Text style={styles.groupTitle}>বিদ্যুৎ বিল</Text>
-
-  <View style={styles.row}>
-    <View style={styles.inputHalf}>
-    <Text style={styles.label}>পূর্ববর্তী রিডিং</Text>
-  <Text style={styles.fixedValue}>{values.prevReading}</Text>
-    </View>
-    <View style={styles.inputHalf}>
-      {renderInput("currReading", "বর্তমান রিডিং", "numeric")}
-    </View>
-  </View>
-
-  {renderInput("unitPrice", "প্রতি ইউনিট দাম (BDT)", "numeric")}
-
-  <View style={styles.inputGroup}>
-    <Text style={styles.label}>বিদ্যুৎ বিল (BDT)</Text>
-    <TextInput
-      style={[styles.input, styles.disabledInput]}
-      value={electricityCharge.toFixed(2)}
-      editable={false}
-    />
-  </View>
-</View>
-
-
- <View tyle={styles.card}>
-  {renderInput("roomRent", "কক্ষ ভাড়া (BDT)", "numeric")}
-   {renderInput("wifi", "WiFi বিল (BDT)", "numeric")}
-  {renderInput("housekeeping", "পরিষ্কার পরিচ্ছন্নতা (BDT)", "numeric")}
- </View>
-
-
-              {/* Group 3: Payment */}
-              <View style={styles.card}>
-                <Text style={styles.groupTitle}>পেমেন্ট</Text>
-                {renderInput("paidAmount", "পরিশোধিত পরিমাণ (BDT)", "numeric")}
-
-                <Text style={styles.totalLabel}>
-                  মোট বিল: {total.toFixed(2)} BDT
-                </Text>
-                <Text style={styles.dueLabel}>
-                  বাকি: {due.toFixed(2)} BDT
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.statusButton}
-                onPress={() =>
-                  Alert.alert(
-                    "স্থিতি পরিবর্তিত হয়েছে",
-                    "ভাড়ার/পরিশোধের অবস্থা আপডেট হয়েছে।"
-                  )
-                }
-              >
-                <Text style={styles.statusButtonText}>ভাড়ার অবস্থা পরিবর্তন</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-                <Text style={styles.saveButtonText}>সংরক্ষণ করুন</Text>
-              </TouchableOpacity>
+            <View style={styles.inputHalf}>
+              {renderInput("currReading", "বর্তমান রিডিং", "numeric")}
             </View>
-          );
-        }}
-      </Formik>
+          </View>
+          {renderInput("unitPrice", "প্রতি ইউনিট দাম (BDT)", "numeric")}
+        </View>
+
+        {/* Other Charges */}
+        <View style={styles.card}>
+          {renderInput("roomRent", "কক্ষ ভাড়া (BDT)", "numeric")}
+          {renderInput("wifi", "WiFi বিল (BDT)", "numeric")}
+          {renderInput("housekeeping", "পরিষ্কার পরিচ্ছন্নতা (BDT)", "numeric")}
+        </View>
+
+        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+          <Text style={styles.saveButtonText}>সংরক্ষণ করুন</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }}
+</Formik>
+
     </ScrollView>
   );
 };
+
+
 
 const styles = StyleSheet.create({
   container: { padding: 20, backgroundColor: "#F9FAFB", paddingBottom: 50 },
@@ -343,4 +309,4 @@ const styles = StyleSheet.create({
  
 });
 
-export default TenantFormScreen;
+export default CreateRoom;

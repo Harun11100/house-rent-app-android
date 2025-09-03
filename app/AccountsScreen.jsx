@@ -1,13 +1,10 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { useRouter } from "expo-router";
+
+import { useNavigation } from "@react-navigation/native";
 
 export default function AccountsScreen() {
-  const router = useRouter();
-
-  const handleSignUp = () => {
-    router.push("/ChooseRole"); // make sure the file name matches
-  };
+  const navigation=useNavigation()
 
   return (
     <View style={styles.container}>
@@ -15,7 +12,7 @@ export default function AccountsScreen() {
       <Text style={styles.title}>Welcome 👋</Text>
       <Text style={styles.subtitle}>Please log in or sign up to continue</Text>
 
-      <TouchableOpacity style={styles.buttonPrimary} onPress={handleSignUp}>
+      <TouchableOpacity style={styles.buttonPrimary}  onPress={() => navigation.navigate("RoleScreen")}>
         <Text style={styles.buttonText}>Sign Up</Text>
       </TouchableOpacity>
 

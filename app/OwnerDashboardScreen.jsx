@@ -24,19 +24,21 @@ const OwnerDashboardScreen = () => {
     const fetchOwnerData = async () => {
       try {
         const storedOwner = await AsyncStorage.getItem("ownerData");
+        
         if (!storedOwner) {
           setOwnerData(null);
           setLoading(false);
           return;
         }
          
+        const parsed=JSON.parse(storedOwner)
         console.log()
         // const owner=ownerData
 
         const phonenumber = "01632705560";
 
         const response = await axios.get(
-          `https://house-rent-management-uc5b.vercel.app/api/getOwnerData?phone=${phonenumber}`
+          `https://house-rent-management-uc5b.vercel.app/api/getOwnerData?phone=${parsed.phone}`
         );
 
         if (response.status === 200 && response.data.success) {
@@ -94,7 +96,7 @@ const OwnerDashboardScreen = () => {
       </View>
 
       <TouchableOpacity
-        onPress={() => router.push({ pathname: "/TenantList",   params: { tenantData: JSON.stringify(tenantData) }})}
+        onPress={() => router.push({ pathname: "/TenantListScreen",   params: { tenantData: JSON.stringify(tenantData),houseName:ownerData.houseName, holdingNumber:ownerData.holdingNumber }})}
         style={styles.cardWrapper}
       >
         <LinearGradient colors={["#6366F1", "#818CF8"]} style={styles.card}>

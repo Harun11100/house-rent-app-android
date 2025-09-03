@@ -28,11 +28,16 @@ const TenantListScreen = () => {
       params: { tenant: tenant ? JSON.stringify(tenant) : null },
     });
   };
-   const createTenantForm = (tenant = null) => {
-    router.push({
-      pathname: "/CreateRoom",
-    });
-  };
+ const createTenantForm = (tenant = null) => {
+  router.push({
+    pathname: "/CreateRoom",
+    params: {
+      houseName: params.houseName,       // pass the houseName
+      holdingNumber: params.holdingNumber, // pass the holdingNumber
+    },
+  });
+};
+
 
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.card} onPress={() => openTenantForm(item)}>

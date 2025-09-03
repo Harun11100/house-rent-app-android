@@ -3,14 +3,15 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import OwnerRegisterScreen from "../app/OwnerRegisterScreen";
 import OwnerDashboardScreen from "../app/OwnerDashboardScreen";
-import TenantListScreen from "../app/TenantList";
-import TenantFormScreen from "../screens/Owner/TenantFormScreen";
 import OwnerInfoScreen from "../app/OwnerInfoScreen";
 import RentCollectionScreen from "../app/RentCollectionScreen";
 import TenantRegisterScreen from "../app/TenantRegisterScreen";
 import TenantDashboardScreen from "../app/TenantDashboardScreen";
-import AccountsScreen from "../app";
-import ChooseRoleScreen from "../screens/ChooseRoleScreen";
+import AccountsScreen from "../app/AccountsScreen";
+import TenantListScreen from "../app/TenantListScreen";
+import ChooseRoleScreen from "../app/ChooseRoleScreen";
+import CreateRoom from "../app/CreateRoom";
+import TenantFormScreen from "../app/TenantFormScreen";
 
 
 const Stack = createNativeStackNavigator();
@@ -28,7 +29,7 @@ export default function AppNavigator() {
       <Stack.Screen name="TenantForm" component={TenantFormScreen} />
       <Stack.Screen name="OwnerInfo" component={OwnerInfoScreen} />
       <Stack.Screen name="RentCollection" component={RentCollectionScreen} />
-
+       <Stack.Screen name="Create" component={CreateRoom} />
       {/* Tenant Screens */}
       <Stack.Screen name="TenantRegister" component={TenantRegisterScreen} />
       <Stack.Screen name="TenantDashboard" component={TenantDashboardScreen} />
