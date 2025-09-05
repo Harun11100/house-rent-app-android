@@ -1,4 +1,3 @@
-// screens/TenantRegisterScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -10,169 +9,183 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { adverts } from "../Data/avdert";
+import SmallAdvertCard from "../components/AdvertCard";
 
 // Validation schema
 const validationSchema = Yup.object().shape({
-  name: Yup.string().required("নাম অবশ্যক"),
   phone: Yup.string()
-    .matches(/^[0-9]{11}$/, "ফোন নাম্বার ১১ সংখ্যার হতে হবে")
-    .required("ফোন নাম্বার অবশ্যক"),
-  houseName: Yup.string().required("বাড়ির নাম অবশ্যক"),
-  holdingNumber: Yup.string().required("হোল্ডিং নাম্বার অবশ্যক"),
-  roomNumber: Yup.string().required("রুম নাম্বার অবশ্যক"),
-  password: Yup.string()
-    .min(6, "পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে")
-    .required("পাসওয়ার্ড অবশ্যক"),
+    .matches(/^[0-9]{11}$/, "Phone number must be 11 digits")
+    .required("ফোন নম্বর অবশ্যক"),
+  roomNumber: Yup.string().required("রুম নম্বর অবশ্যক"),
 });
 
-export default function TenantRegisterScreen({ navigation }) {
+export default function TenantLoginScreen() {
   const [loading, setLoading] = useState(false);
+  const [checkingStorage, setCheckingStorage] = useState(true);
 
-  // Check if tenant data is already stored
+  const router = useRouter();
+
+  // ✅ Check AsyncStorage on mount
   useEffect(() => {
-    const checkTenantSession = async () => {
-      const storedTenant = await AsyncStorage.getItem("tenantData");
-      if (storedTenant) {
-        navigation.navigate("TenantDashboard", {
-          tenant: JSON.parse(storedTenant),
-        });
+    const checkStoredTenant = async () => {
+      try {
+        const storedTenant = await AsyncStorage.getItem("tenantData");
+        if (storedTenant) {
+          const { phone } = JSON.parse(storedTenant);
+          console.log("Stored tenant phone:", phone);
+          router.push(`/TenantDashboardScreen?phone=${phone}`);
+          return; // Prevent further rendering
+        }
+      } catch (error) {
+        console.error("Error reading AsyncStorage:", error);
+      } finally {
+        setCheckingStorage(false);
       }
     };
-    checkTenantSession();
+    checkStoredTenant();
   }, []);
 
-  const onFormSubmit = async (values, { resetForm }) => {
+  const onFormSubmit = async (values) => {
     setLoading(true);
     try {
-      console.log("রেজিস্টার ডেটা:", values);
+      const payload = {
+        phone: values.phone.trim(),
+        roomNumber: values.roomNumber.trim(),
+      };
 
       const res = await axios.post(
-        "https://house-rent-management-uc5b.vercel.app/api/tenant/register",
-        values
+        "https://house-rent-management-uc5b.vercel.app/api/tenant/login",
+        payload
       );
 
-      console.log("সার্ভার থেকে রেসপন্স:", res.data);
+      console.log("Login response:", res.data);
 
-      await AsyncStorage.setItem("tenantData", JSON.stringify(res.data.tenant));
+      // Save tenant info in AsyncStorage
+      await AsyncStorage.setItem(
+        "tenantData",
+        JSON.stringify({
+          phone: res.data.tenant.phone,
+          roomNumber: res.data.tenant.roomNumber,
+        })
+      );
 
-      Alert.alert("সফল", "টেন্যান্ট সফলভাবে রেজিস্টার হয়েছে!");
-      resetForm();
-      navigation.navigate("TenantDashboard", { tenant: res.data.tenant });
+      Alert.alert("সফল", "লগইন সফল হয়েছে!");
+
+      // Navigate to dashboard
+      router.push(`/TenantDashboardScreen?phone=${res.data.tenant.phone}`);
     } catch (error) {
-      console.error("Tenant registration error:", error.response || error);
+      console.error("Tenant login error:", error.response?.data || error.message || error);
       Alert.alert(
         "ত্রুটি",
-        error.response?.data?.message || "কিছু ভুল হয়েছে, আবার চেষ্টা করুন"
+        error.response?.data?.message || "কিছু ভুল হয়েছে"
       );
     } finally {
       setLoading(false);
     }
   };
 
+  if (checkingStorage) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>টেন্যান্ট রেজিস্ট্রেশন</Text>
+      <Text style={styles.title}>ভাড়াটিয়া লগইন</Text>
 
       <Formik
-        initialValues={{
-          name: "",
-          phone: "",
-          houseName: "",
-          holdingNumber: "",
-          roomNumber: "",
-          password: "",
-        }}
+        initialValues={{ phone: "", roomNumber: "" }}
         validationSchema={validationSchema}
         onSubmit={onFormSubmit}
       >
         {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
           <View style={styles.form}>
-            {[
-              { key: "name", placeholder: "পূর্ণ নাম" },
-              { key: "phone", placeholder: "ফোন নাম্বার", keyboardType: "phone-pad" },
-              { key: "houseName", placeholder: "বাড়ির নাম" },
-              { key: "holdingNumber", placeholder: "হোল্ডিং নাম্বার" },
-              { key: "roomNumber", placeholder: "রুম নাম্বার" },
-              { key: "password", placeholder: "পাসওয়ার্ড", secureTextEntry: true },
-            ].map(({ key, placeholder, keyboardType, secureTextEntry }) => (
-              <View key={key} style={{ marginBottom: 12 }}>
-                <TextInput
-                  style={styles.input}
-                  placeholder={placeholder}
-                  value={values[key]}
-                  onChangeText={handleChange(key)}
-                  onBlur={handleBlur(key)}
-                  keyboardType={keyboardType || "default"}
-                  secureTextEntry={secureTextEntry || false}
-                />
-                {errors[key] && touched[key] && (
-                  <Text style={styles.error}>{errors[key]}</Text>
-                )}
-              </View>
-            ))}
+            <View style={{ marginBottom: 12 }}>
+              <Text style={styles.label}>ফোন নাম্বার </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Phone Number"
+                value={values.phone}
+                onChangeText={handleChange("phone")}
+                onBlur={handleBlur("phone")}
+                keyboardType="phone-pad"
+              />
+              {errors.phone && touched.phone && (
+                <Text style={styles.error}>{errors.phone}</Text>
+              )}
+            </View>
+
+            <View style={{ marginBottom: 12 }}>
+              <Text style={styles.label}>রুম নাম্বার </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Room Number"
+                value={values.roomNumber}
+                onChangeText={handleChange("roomNumber")}
+                onBlur={handleBlur("roomNumber")}
+              />
+              {errors.roomNumber && touched.roomNumber && (
+                <Text style={styles.error}>{errors.roomNumber}</Text>
+              )}
+            </View>
 
             <TouchableOpacity
-              style={styles.button}
+              style={styles.submitButton}
               onPress={handleSubmit}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>রেজিস্টার করুন</Text>
+                <Text style={styles.submitText}>লগইন করুন</Text>
               )}
             </TouchableOpacity>
           </View>
         )}
       </Formik>
+        <View style={{ paddingHorizontal: 0 }}>
+                  {adverts.map((item) => (
+                    <SmallAdvertCard
+                      key={item.id}
+                      logo={item.logo}
+                      image={item.image}
+                      title={item.title}
+                      link={item.link}
+                    />
+                  ))}
+                </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
     padding: 20,
-    justifyContent: "center",
     backgroundColor: "#F3F4F6",
+    flexGrow: 1,
+    justifyContent: "center",
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#111827",
-  },
-  form: {
-    flex: 1,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    fontSize: 16,
-  },
-  error: {
-    color: "#EF4444",
-    fontSize: 13,
-    marginTop: 4,
-  },
-  button: {
-    backgroundColor: "#6366F1",
-    padding: 15,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  label: {
+  fontSize: 16,
+  fontWeight: "600",
+  color: "#374151", // modern dark gray
+  marginBottom: 4,
+  letterSpacing: 0.5,
+},
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 26, fontWeight: "bold", marginBottom: 25, color: "#111827", textAlign: "center" },
+  form: { flex: 1 },
+  input: { borderWidth: 1, borderColor: "#D1D5DB", padding: 12, borderRadius: 12, backgroundColor: "#fff", fontSize: 16 },
+  error: { color: "#EF4444", fontSize: 13, marginTop: 4 },
+  submitButton: { marginTop: 20, backgroundColor: "#6366F1", padding: 15, borderRadius: 12, alignItems: "center" },
+  submitText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 });

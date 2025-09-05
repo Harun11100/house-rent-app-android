@@ -12,6 +12,10 @@ import {
 import { Formik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // <-- import AsyncStorage
+import SmallAdvertCard from "../components/AdvertCard";
+import { adverts } from "../Data/avdert";
 
 // Validation schema
 const validationSchema = Yup.object().shape({
@@ -21,26 +25,25 @@ const validationSchema = Yup.object().shape({
   password: Yup.string().required("পাসওয়ার্ড অবশ্যক"),
 });
 
-export default function OwnerLoginScreen({ navigation }) {
+export default function OwnerLoginScreen() {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const onFormSubmit = async (values) => {
     setLoading(true);
     try {
-      console.log("Login data:", values);
       const res = await axios.post(
         "https://house-rent-management-uc5b.vercel.app/api/owner/login",
         values
       );
 
-      console.log("Response from server:", res.data);
+      // ✅ Store login data in AsyncStorage
+      await AsyncStorage.setItem("ownerData", JSON.stringify(res.data.owner));
 
       Alert.alert("সফল", "লগইন সফল হয়েছে!");
-      navigation.navigate("OwnerDashboard", {
-        ownerId: res.data.owner._id,
-        ownerName: res.data.owner.ownerName,
-        houseName: res.data.owner.houseName,
-      });
+      router.push(
+        `/OwnerDashboardScreen?phone=${res.data.owner._id}&ownerName=${res.data.owner.ownerName}&houseName=${res.data.owner.houseName}`
+      );
     } catch (error) {
       console.error("Login error:", error.response || error);
       Alert.alert(
@@ -52,9 +55,16 @@ export default function OwnerLoginScreen({ navigation }) {
     }
   };
 
+  // ✅ Optional: Function to retrieve saved login data
+  const getSavedOwnerData = async () => {
+    const data = await AsyncStorage.getItem("ownerData");
+    return data ? JSON.parse(data) : null;
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Owner লগইন</Text>
+    
+      <Text style={styles.title}>বাড়িওয়ালা লগইন</Text>
 
       <Formik
         initialValues={{ phone: "", password: "" }}
@@ -64,6 +74,8 @@ export default function OwnerLoginScreen({ navigation }) {
         {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
           <View style={styles.form}>
             <View style={{ marginBottom: 12 }}>
+              <Text style={styles.label}>ফোন নাম্বার</Text>
+
               <TextInput
                 style={styles.input}
                 placeholder="Phone Number"
@@ -78,6 +90,7 @@ export default function OwnerLoginScreen({ navigation }) {
             </View>
 
             <View style={{ marginBottom: 12 }}>
+            <Text style={styles.label}>পাসওয়ার্ড</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Password"
@@ -105,6 +118,17 @@ export default function OwnerLoginScreen({ navigation }) {
           </View>
         )}
       </Formik>
+       <View style={{ paddingHorizontal: 0 }}>
+      {adverts.map((item) => (
+        <SmallAdvertCard
+          key={item.id}
+          logo={item.logo}
+          image={item.image}
+          title={item.title}
+          link={item.link}
+        />
+      ))}
+    </View>
     </ScrollView>
   );
 }
@@ -115,6 +139,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     flexGrow: 1,
     justifyContent: "center",
+  },
+   label: {
+    fontSize: 16,            // slightly larger for readability
+    fontWeight: "600",       // semi-bold
+    color: "#374151",        // dark gray for modern look
+    marginBottom: 6,         // spacing between label and input
+    letterSpacing: 0.5,      // subtle letter spacing
   },
   title: {
     fontSize: 26,

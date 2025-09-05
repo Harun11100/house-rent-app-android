@@ -1,37 +1,86 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
-
-import { useNavigation } from "@react-navigation/native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router"; // <-- use router
 
 export default function AccountsScreen() {
-  const navigation=useNavigation()
+  const router = useRouter(); // get router
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Image style={styles.img} source={require('../assets/icons/house.png')} />
-      <Text style={styles.title}>Welcome 👋</Text>
-      <Text style={styles.subtitle}>Please log in or sign up to continue</Text>
+      <Text style={styles.title}>আপনার বাড়ি, বিল এবং সুবিধাগুলো সহজে নিয়ন্ত্রণ করুন</Text>
+      <Text style={styles.subtitle}>লগইন করুন বা সাইন আপ করুন</Text>
 
-      <TouchableOpacity style={styles.buttonPrimary}  onPress={() => navigation.navigate("RoleScreen")}>
-        <Text style={styles.buttonText}>Sign Up</Text>
-      </TouchableOpacity>
+      <LinearGradient colors={["#4F46E5", "#6366F1"]} style={styles.buttonPrimary}>
+        <TouchableOpacity 
+          onPress={() => router.push("/OwnerRegisterScreen")} 
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <Text style={styles.buttonText}>সাইন আপ</Text>
+        </TouchableOpacity>
+      </LinearGradient>
 
-      <TouchableOpacity
-        style={styles.buttonSecondary}
-        onPress={() => alert("Login flow here")}
-      >
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
-    </View>
+      <LinearGradient colors={["#10B981", "#34D399"]} style={styles.buttonSecondary}>
+        <TouchableOpacity 
+          onPress={() => router.push("/OwnerLoginScreen")} 
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <Text style={styles.buttonText}>লগইন</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB", alignItems: "center", justifyContent: "center", padding: 20 },
-  img: { height: 240, width: 240 },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 10, color: "#111827" },
-  subtitle: { fontSize: 16, color: "#6B7280", marginBottom: 40, textAlign: "center" },
-  buttonPrimary: { backgroundColor: "#2563EB", paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12, marginBottom: 15, width: "80%", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
-  buttonSecondary: { backgroundColor: "#10B981", paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12, width: "80%", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  container: {
+    flexGrow: 1,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20
+  },
+  img:{
+    width:120,
+    height:120,
+    marginBottom: 20
+  },
+  title: {
+    fontSize: 25,
+    fontWeight: "800",
+    marginBottom: 10,
+    color: "#111827",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+    marginBottom: 40,
+    textAlign: "center"
+  },
+  buttonPrimary: {
+    width: "80%",
+    height: 55,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5
+  },
+  buttonSecondary: {
+    width: "80%",
+    height: 55,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700"
+  }
 });

@@ -1,5 +1,4 @@
-// screens/TenantLoginScreen.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,37 +12,66 @@ import {
 import { Formik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 // Validation schema
 const validationSchema = Yup.object().shape({
   phone: Yup.string()
     .matches(/^[0-9]{11}$/, "Phone number must be 11 digits")
     .required("ফোন নম্বর অবশ্যক"),
-  password: Yup.string().required("পাসওয়ার্ড অবশ্যক"),
+  roomNumber: Yup.string().required("রুম নম্বর অবশ্যক"),
 });
 
-export default function TenantLoginScreen({ navigation }) {
+export default function TenantLoginScreen() {
   const [loading, setLoading] = useState(false);
+  const [checkingStorage, setCheckingStorage] = useState(true);
+  const router = useRouter();
+
+  // Check AsyncStorage on mount
+  useEffect(() => {
+    const checkStoredTenant = async () => {
+      try {
+        const storedTenant = await AsyncStorage.getItem("tenantData");
+        if (storedTenant) {
+          const { phone } = JSON.parse(storedTenant);
+          router.replace({
+            pathname: "/TenantDashboard",
+            params: { phone },
+          });
+        }
+      } catch (error) {
+        console.error("Error reading AsyncStorage:", error);
+      } finally {
+        setCheckingStorage(false);
+      }
+    };
+    checkStoredTenant();
+  }, []);
 
   const onFormSubmit = async (values) => {
     setLoading(true);
     try {
-      console.log("Tenant login data:", values);
-
       const res = await axios.post(
         "https://house-rent-management-uc5b.vercel.app/api/tenant/login",
         values
       );
 
-      console.log("Response from server:", res.data);
+      // Save tenant info in AsyncStorage
+      await AsyncStorage.setItem(
+        "tenantData",
+        JSON.stringify({
+          phone: res.data.tenant.phone,
+          roomNumber: res.data.tenant.roomNumber,
+        })
+      );
 
       Alert.alert("সফল", "লগইন সফল হয়েছে!");
-      // Navigate to Tenant Dashboard
-      navigation.navigate("TenantDashboard", {
-        tenantId: res.data.tenant._id,
-        tenantName: res.data.tenant.name,
-        roomNumber: res.data.tenant.roomNumber,
-        houseName: res.data.tenant.houseName,
+
+      // Navigate to dashboard
+      router.replace({
+        pathname: "/TenantDashboard",
+        params: { phone: res.data.tenant.phone },
       });
     } catch (error) {
       console.error("Tenant login error:", error.response || error);
@@ -56,12 +84,20 @@ export default function TenantLoginScreen({ navigation }) {
     }
   };
 
+  if (checkingStorage) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Tenant লগইন</Text>
+      <Text style={styles.title}>ভাড়াটিয়া লগইন</Text>
 
       <Formik
-        initialValues={{ phone: "", password: "" }}
+        initialValues={{ phone: "", roomNumber: "" }}
         validationSchema={validationSchema}
         onSubmit={onFormSubmit}
       >
@@ -84,14 +120,13 @@ export default function TenantLoginScreen({ navigation }) {
             <View style={{ marginBottom: 12 }}>
               <TextInput
                 style={styles.input}
-                placeholder="Password"
-                value={values.password}
-                onChangeText={handleChange("password")}
-                onBlur={handleBlur("password")}
-                secureTextEntry
+                placeholder="Room Number"
+                value={values.roomNumber}
+                onChangeText={handleChange("roomNumber")}
+                onBlur={handleBlur("roomNumber")}
               />
-              {errors.password && touched.password && (
-                <Text style={styles.error}>{errors.password}</Text>
+              {errors.roomNumber && touched.roomNumber && (
+                <Text style={styles.error}>{errors.roomNumber}</Text>
               )}
             </View>
 
@@ -114,45 +149,12 @@ export default function TenantLoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: "#F3F4F6",
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 25,
-    color: "#111827",
-    textAlign: "center",
-  },
-  form: {
-    flex: 1,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    fontSize: 16,
-  },
-  error: {
-    color: "#EF4444",
-    fontSize: 13,
-    marginTop: 4,
-  },
-  submitButton: {
-    marginTop: 20,
-    backgroundColor: "#6366F1",
-    padding: 15,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  submitText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  container: { padding: 20, backgroundColor: "#F3F4F6", flexGrow: 1, justifyContent: "center" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 26, fontWeight: "bold", marginBottom: 25, color: "#111827", textAlign: "center" },
+  form: { flex: 1 },
+  input: { borderWidth: 1, borderColor: "#D1D5DB", padding: 12, borderRadius: 12, backgroundColor: "#fff", fontSize: 16 },
+  error: { color: "#EF4444", fontSize: 13, marginTop: 4 },
+  submitButton: { marginTop: 20, backgroundColor: "#6366F1", padding: 15, borderRadius: 12, alignItems: "center" },
+  submitText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 });

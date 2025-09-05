@@ -1,38 +1,71 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router"; // <-- use router
+import { useRouter } from "expo-router";
 
 export default function ChooseRoleScreen() {
-  const router = useRouter(); // get router
+  const router = useRouter();
 
   const selectRole = async (role) => {
     await SecureStore.setItemAsync("userRole", role);
 
     if (role === "tenant") {
-      router.push("/TenantRegisterScreen"); // push to tenant register
+      router.push("/TenantRegisterScreen");
     } else {
-      router.push("/OwnerRegisterScreen"); // push to owner register
+      router.push("/AccountsScreen");
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* ব্যাক বোতাম */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()} // go back
-      >
-        <Ionicons name="arrow-back" size={24} color="#111827" />
-        <Text style={styles.backText}>পেছনে</Text>
-      </TouchableOpacity>
+   <View style={{ alignItems: "center", marginVertical: 20 }}>
+  {/* Subtitle */}
+  <Text style={{
+    fontSize: 16,
+    color: "#6B7280",
+    letterSpacing: 1,
+    marginBottom: 6,
+    textTransform: "uppercase"
+  }}>
+    আপনার স্মার্ট ভাড়া সহকারী
+  </Text>
 
-      {/* শিরোনাম */}
-      <Text style={styles.heading}>নিবন্ধন করুন:</Text>
+  {/* Title with Gradient */}
+  <LinearGradient
+    colors={["#4F46E5", "#6366F1", "#818CF8"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+    style={{ borderRadius: 8, paddingHorizontal: 8 }}
+  >
+    <Text
+      style={{
+        fontSize: 32,
+        fontWeight: "bold",
+        color: "white",
+        textAlign: "center",
+      }}
+    >
+      ভাড়া ম্যানেজার
+    </Text>
+  </LinearGradient>
 
-      {/* রোল কার্ড */}
+  {/* Small tagline */}
+  <Text style={{
+    fontSize: 14,
+    color: "#9CA3AF",
+    marginTop: 6,
+    fontStyle: "italic"
+  }}>
+    ভাড়ার হিসাব এক ক্লিকে
+  </Text>
+</View>
+
+
+      <Image style={styles.img} source={require('../assets/icons/house.png')} />
+      <Text style={styles.subtitle}>নিবন্ধন করুন:</Text>
+
+      {/* Role Cards */}
       <TouchableOpacity
         style={styles.roleCardWrapper}
         onPress={() => selectRole("tenant")}
@@ -53,7 +86,20 @@ export default function ChooseRoleScreen() {
           colors={["#059669", "#10B981"]}
           style={styles.roleCard}
         >
-          <Text style={styles.roleText}>মালিক</Text>
+          <Text style={styles.roleText}>বাড়ীওয়ালা</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* Benefits Button */}
+      <TouchableOpacity
+        style={styles.benefitsButtonWrapper}
+        onPress={() => router.push("/BenefitScreen")}
+      >
+        <LinearGradient
+          colors={["#F59E0B", "#FBBF24"]}
+          style={styles.benefitsButton}
+        >
+          <Text style={styles.benefitsText}>অ্যাপের সুবিধা দেখুন</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -68,24 +114,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-  backButton: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    flexDirection: "row",
-    alignItems: "center",
+  img: { height: 140, width: 140 },
+ subtitle: {
+    fontSize: 24,
+    textAlign: "center",
+    color: "#374151",
+    marginBottom: 10,
   },
-  backText: {
-    marginLeft: 5,
-    fontSize: 16,
-    color: "#111827",
-    fontWeight: "500",
+  title: {
+    fontSize: 28,
+    textAlign: "center",
   },
   heading: {
     fontSize: 28,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 40,
+    marginBottom: 20,
   },
   roleCardWrapper: {
     width: "80%",
@@ -105,6 +149,27 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 20,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  benefitsButtonWrapper: {
+    width: "80%",
+    marginTop: 20,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  benefitsButton: {
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  benefitsText: {
+    fontSize: 18,
     fontWeight: "600",
     color: "#fff",
   },

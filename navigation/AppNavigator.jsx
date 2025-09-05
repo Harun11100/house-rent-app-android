@@ -19,7 +19,7 @@ const Stack = createNativeStackNavigator();
 export default function AppNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="Account"
+      initialRouteName="RoleScreen"
       screenOptions={{ headerShown: false }}
     >
       {/* Owner Screens */}

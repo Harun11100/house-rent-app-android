@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "house-rent-app",
-    "slug": "house-rent-app",
+    "name": "House Rent Mangement",
+    "slug": "house-rent-management-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icons/icon.png",
@@ -12,6 +12,11 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.yourname.houserentmanager",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -38,6 +43,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "63d9d9a9-8a7a-4a54-a2c3-5309c7fe1eb4"
+      }
     }
   }
 }

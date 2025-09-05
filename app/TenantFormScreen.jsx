@@ -55,7 +55,7 @@ const TenantFormScreen = () => {
     return (currNum - prevNum) * unitNum;
   };
 
-  const calculateTotal = ({ roomRent, electricity, wifi, housekeeping, paidAmount }) => {
+    const calculateTotal = ({ roomRent, electricity, wifi, housekeeping, paidAmount }) => {
     const total =
       parseFloat(roomRent || 0) +
       parseFloat(electricity || 0) +
@@ -64,37 +64,78 @@ const TenantFormScreen = () => {
     return { total, due: total - parseFloat(paidAmount || 0) };
   };
 
-  const submitTenantData = async (values) => {
-    const electricityCharge = calculateElectricity(values.prevReading, values.currReading, values.unitPrice);
-    const { total, due } = calculateTotal({
-      roomRent: values.roomRent,
-      electricity: electricityCharge,
-      wifi: values.wifi,
-      housekeeping: values.housekeeping,
-      paidAmount: values.paidAmount,
-    });
 
-    const payload = { ...values, electricityCharge, totalAmount: total, dueAmount: due ,tenantId: tenant?._id,};
-    console.log("Payload submitted:", payload); // ✅ Always logs
-    try {
- 
-      const res = await fetch("https://house-rent-management-uc5b.vercel.app/api/owner/tenantUpdate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        Alert.alert("সফল হয়েছে", "Tenant data successfully updated!");
-        router.back();
-      } else {
-        Alert.alert("ত্রুটি", data.message || "Something went wrong");
-      }
-    } catch (error) {
-      console.error(error);
-      Alert.alert("ত্রুটি", "Server error. Please try again.");
-    }
+
+const submitTenantData = async (values) => {
+  const electricityCharge = calculateElectricity(
+    values.prevReading,
+    values.currReading,
+    values.unitPrice
+  );
+  const { total, due } = calculateTotal({
+    roomRent: values.roomRent,
+    electricity: electricityCharge,
+    wifi: values.wifi,
+    housekeeping: values.housekeeping,
+    paidAmount: values.paidAmount,
+  });
+
+  const payload = {
+    ...values,
+    electricityCharge,
+    totalAmount: total,
+    dueAmount: due,
+    tenantId: tenant?._id,
   };
+
+  console.log("Payload submitted:", payload);
+
+  // Confirm before submission
+  Alert.alert(
+    "আপডেট নিশ্চিত করুন",
+   `আপনি কি নিশ্চিত যে আপনি ভাড়াটিয়া "${values.tenant.name}" এর তথ্য আপডেট করতে চান?`,
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Yes",
+        onPress: async () => {
+          try {
+            const res = await fetch(
+              "https://house-rent-management-uc5b.vercel.app/api/owner/tenantUpdate",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              }
+            );
+
+            const data = await res.json();
+
+            if (res.ok) {
+              Alert.alert(
+                "সফল হয়েছে",
+                `Tenant "${values.tenant.name}" updated successfully!\nTotal: ${total} BDT\nDue: ${due} BDT`
+              );
+              router.back();
+            } else {
+              Alert.alert("ত্রুটি", data.message || "Something went wrong");
+            }
+          } catch (error) {
+            console.error(error);
+            Alert.alert("ত্রুটি", "Server error. Please try again.");
+          }
+        },
+      },
+    ]
+  );
+};
+
+  
+
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -142,42 +183,105 @@ const TenantFormScreen = () => {
             </View>
           );
 
-        const changeStatus = async (newStatus) => {
-              if (!tenant?._id) {
-                Alert.alert("ত্রুটি", "Tenant ID is missing");
-                return;
+  const handleClearTenant = () => {
+  Alert.alert(
+   "নিশ্চিতকরণ",
+"আপনি কি ভাড়াটিয়ার নাম এবং ফোন মুছে দিতে চান? তাহলে ভাড়াটিয়া আর এই বিলের তথ্য দেখতে পারবে না।",
+    [
+      {
+        text: "বাতিল করুন",
+        style: "cancel",
+      },
+      {
+        text: "হ্যাঁ",
+        onPress: async () => {
+          try {
+            const res = await fetch(
+              "https://house-rent-management-uc5b.vercel.app/api/owner/deleteTenantInfo",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tenantId: tenant?._id }),
               }
+            );
 
-              try {
-                const res = await fetch(
-                  "https://house-rent-management-uc5b.vercel.app/api/owner/statusUpdate",
-                  {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ tenantId: tenant._id, status: newStatus }),
-                  }
-                );
+            const data = await res.json();
 
-                const data = await res.json();
+            if (res.ok) {
+              setFieldValue("tenant.name", data.tenant.tenant.name);
+              setFieldValue("tenant.phone", data.tenant.tenant.phone);
+              Alert.alert("সফল হয়েছে", "নাম ও ফোন মুছে ফেলা হয়েছে");
+            } else {
+              Alert.alert("ত্রুটি", data.message || "Something went wrong");
+            }
+          } catch (error) {
+            console.error(error);
+            Alert.alert("ত্রুটি", "Server error. Please try again.");
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
 
-                if (res.ok) {
-                  // Update formik fields with server-calculated values
-                  setFieldValue("status", data.tenant.status);
-                  setFieldValue("prevReading", data.tenant.prevReading);
-                  setFieldValue("currReading", data.tenant.currReading);
-                  setFieldValue("electricityCharge", data.tenant.electricityCharge);
-                  setFieldValue("totalAmount", data.tenant.totalAmount);
-                  setFieldValue("dueAmount", data.tenant.dueAmount);
 
-                  Alert.alert("স্থিতি পরিবর্তিত হয়েছে", `ভাড়ার অবস্থা এখন: ${data.tenant.status}`);
-                } else {
-                  Alert.alert("ত্রুটি", data.message || "Status update failed");
-                }
-              } catch (error) {
-                console.error("changeStatus error:", error);
-                Alert.alert("ত্রুটি", "Server error. Please try again.");
+
+
+     const changeStatus = (newStatus) => {
+  if (!tenant?._id) {
+    Alert.alert("ত্রুটি", "Tenant ID is missing");
+    return;
+  }
+
+  // Show confirmation alert
+  Alert.alert(
+    "স্থিতি পরিবর্তন করুন",
+    `আপনি কি নিশ্চিত যে ভাড়ার অবস্থা '${newStatus}' এ পরিবর্তন করতে চান?`,
+    [
+      { text: "বাতিল", style: "cancel" },
+      {
+        text: "হ্যাঁ",
+        onPress: async () => {
+          try {
+            const res = await fetch(
+              "https://house-rent-management-uc5b.vercel.app/api/owner/statusUpdate",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tenantId: tenant._id, status: newStatus }),
               }
-            };
+            );
+
+            const data = await res.json();
+
+            if (res.ok) {
+              // Update formik fields with server-calculated values
+              setFieldValue("status", data.tenant.status);
+              setFieldValue("prevReading", data.tenant.prevReading);
+              setFieldValue("currReading", data.tenant.currReading);
+              setFieldValue("electricityCharge", data.tenant.electricityCharge);
+              setFieldValue("totalAmount", data.tenant.totalAmount);
+              setFieldValue("dueAmount", data.tenant.dueAmount);
+              setFieldValue("paidAmount", 0);
+
+              Alert.alert(
+                "স্থিতি পরিবর্তিত হয়েছে",
+                `ভাড়ার অবস্থা এখন: ${data.tenant.status}`
+              );
+            } else {
+              Alert.alert("ত্রুটি", data.message || "Status update failed");
+            }
+          } catch (error) {
+            console.error("changeStatus error:", error);
+            Alert.alert("ত্রুটি", "Server error. Please try again.");
+          }
+        },
+      },
+    ]
+  );
+};
+
 
 
           return (
@@ -241,6 +345,13 @@ const TenantFormScreen = () => {
               <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
                 <Text style={styles.saveButtonText}>সংরক্ষণ করুন</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleClearTenant}
+              activeOpacity={0.8} // smooth press effect
+            >
+              <Text style={styles.deleteButtonText}>❌ নাম ও ফোন নাম্বার মুছুন</Text>
+            </TouchableOpacity>
             </View>
           );
         }}
@@ -252,7 +363,7 @@ const TenantFormScreen = () => {
 const styles = StyleSheet.create({
   container: { padding: 20, backgroundColor: "#F9FAFB", paddingBottom: 50 },
   fixedValue: { backgroundColor: "#f0f0f0", borderWidth: 1, borderColor: "#e0e0e0", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#555" },
-  header: { fontSize: 26, fontWeight: "800", marginBottom: 20, textAlign: "center", color: "#1F2937" },
+  header: { fontSize: 26, fontWeight: "800", marginBottom: 20, textAlign: "center", color: "#307ae1ff" },
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginVertical: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 4 },
   groupTitle: { fontSize: 18, fontWeight: "600", marginBottom: 12, color: "#1a1a1a", textAlign: "center" },
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
@@ -267,6 +378,19 @@ const styles = StyleSheet.create({
   statusButtonText: { color: "#fff", fontSize: 16, fontWeight: "700", letterSpacing: 0.5 },
   saveButton: { backgroundColor: "#4F46E5", padding: 16, borderRadius: 14, alignItems: "center", shadowColor: "#4F46E5", shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 6, elevation: 5 },
   saveButtonText: { color: "#fff", fontSize: 17, fontWeight: "700", letterSpacing: 0.5 },
+  deleteButton: {
+   
+    marginTop:28,
+    marginVertical:10,
+    marginHorizontal:10,
+
+    
+  },
+  deleteButtonText: {
+    color: "#555252ff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   error: { color: "#DC2626", fontSize: 13, marginTop: 4 },
 });
 

@@ -1,84 +1,150 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
+import axios from "axios";
+import { useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 
 const RentCollectionScreen = () => {
-  const [tenants, setTenants] = useState([
-    { id: "1", name: "জন ডো", roomRent: 10000, electricity: 1200, paidRent: 9000 },
-    { id: "2", name: "জেন স্মিথ", roomRent: 12000, electricity: 1500, paidRent: 12000 },
-    { id: "3", name: "আলি খান", roomRent: 8000, electricity: 900, paidRent: 7000 },
-    { id: "4", name: "সারা রহমান", roomRent: 9000, electricity: 1100, paidRent: 9000 },
-  ]);
-
-  const [totalRent, setTotalRent] = useState(0);
-  const [totalElectricity, setTotalElectricity] = useState(0);
+  const [tenants, setTenants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalAmount, setTotalAmount] = useState(0);
   const [totalDue, setTotalDue] = useState(0);
 
+  const params = useLocalSearchParams();
+  const phone = params.phone || "";
+
   useEffect(() => {
-    let rentSum = 0;
-    let electricitySum = 0;
+    const fetchTenants = async () => {
+      if (!phone) return setLoading(false);
+
+      try {
+        const response = await axios.get(
+          `https://house-rent-management-uc5b.vercel.app/api/getOwnerData?phone=${phone}`
+        );
+
+        if (response.status === 200 && response.data.success) {
+          setTenants(response.data.tenants || []);
+        } else {
+          setTenants([]);
+        }
+      } catch (error) {
+        console.error("Error fetching tenant data:", error);
+        setTenants([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTenants();
+  }, [phone]);
+
+  useEffect(() => {
+    let amountSum = 0;
     let dueSum = 0;
 
     tenants.forEach((t) => {
-      rentSum += t.paidRent;
-      electricitySum += t.electricity;
-      dueSum += t.roomRent - t.paidRent;
+      const paidAmount = Number(t.paidAmount ?? 0);
+      const roomRent = Number(t.roomRent ?? 0);
+
+      amountSum += paidAmount;
+      dueSum += roomRent - paidAmount;
     });
 
-    setTotalRent(rentSum);
-    setTotalElectricity(electricitySum);
+    setTotalAmount(amountSum);
     setTotalDue(dueSum);
   }, [tenants]);
 
   const renderTenant = ({ item }) => (
     <View style={styles.card}>
-      <Text style={styles.name}>{item.name}</Text>
-      <Text style={styles.detail}>কক্ষ ভাড়া: {item.roomRent} BDT</Text>
-      <Text style={styles.detail}>পরিশোধিত ভাড়া: {item.paidRent} BDT</Text>
-      <Text style={styles.detail}>বিদ্যুৎ বিল: {item.electricity} BDT</Text>
-      <Text style={styles.due}>বাকি: {item.roomRent - item.paidRent} BDT</Text>
+      
+      <View style={styles.row}>
+        <Text style={styles.name}>{item.tenant?.name || "নাম নেই"}</Text>
+        <Text style={styles.amount}>মোট: {item.paidAmount ?? 0} BDT</Text>
+       <Text style={styles.due}>বাকি: {(item.roomRent ?? 0) - (item.paidAmount ?? 0)} BDT</Text>
+      </View>
+    
+        <View style={styles.roomContainer} >
+            <Text style={styles.roomLabel}>রুম</Text>
+             <Text style={styles.roomNumber}>{item.roomNumber}</Text>
+       </View>
+      
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={["#F3F4F6", "#EDE9FE"]} style={styles.container}>
       <Text style={styles.header}>ভাড়া সংগ্রহ</Text>
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryText}>মোট সংগ্রহিত ভাড়া: {totalRent} BDT</Text>
-        <Text style={styles.summaryText}>মোট বিদ্যুৎ সংগ্রহ: {totalElectricity} BDT</Text>
+     <LinearGradient colors={["#12cec5ff", "#34d3abff"]} style={styles.summaryCard}>
+        <Text style={styles.summaryText}>মোট পরিশোধিত: {totalAmount} BDT</Text>
         <Text style={styles.summaryTextDue}>মোট বাকি: {totalDue} BDT</Text>
-      </View>
+      </LinearGradient>
 
       <FlatList
         data={tenants}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         renderItem={renderTenant}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 20, paddingTop: 10 }}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>কোনো ভাড়াটিয়া পাওয়া যায়নি।</Text>
+          </View>
+        }
       />
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#F8FAFC" },
-  header: { fontSize: 28, fontWeight: "700", color: "#1F2937", textAlign: "center", marginBottom: 25 },
+  container: { flex: 1, padding: 18 },
+  header: { fontSize: 28, fontWeight: "700", color: "#386fe6ff", textAlign: "center", marginBottom: 20 },
   summaryCard: {
-    backgroundColor: "#4F46E5",
+    marginLeft:5,
+    marginRight:5,
+    borderRadius: 20,
     padding: 20,
-    borderRadius: 18,
-    marginBottom: 25,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 5 },
-    shadowRadius: 10,
-    elevation: 6,
+    marginBottom: 20,
+    shadowColor: "#4F46E5",
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 10,
   },
   summaryText: { fontSize: 18, fontWeight: "600", color: "#fff", marginBottom: 6 },
-  summaryTextDue: { fontSize: 18, fontWeight: "700", color: "#F87171", marginTop: 8 },
-  card: { backgroundColor: "#fff", padding: 18, borderRadius: 16, marginBottom: 15, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 4 },
-  name: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 6 },
-  detail: { fontSize: 16, color: "#4B5563" },
-  due: { fontSize: 16, color: "#EF4444", fontWeight: "600", marginTop: 4 },
+  roomContainer: { backgroundColor: "#E0E7FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, alignItems: "center" },
+  summaryTextDue: { fontSize: 18, fontWeight: "700", color: "#F87171", marginTop: 6 },
+  card: {
+     marginLeft:5,
+    marginRight:5,
+    flexDirection:"row",
+    justifyContent:"space-between",
+    backgroundColor: "#fff",
+    padding: 18,
+    borderRadius: 16,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  name: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 4 },
+  room: { fontSize: 16, color: "#4B5563", marginBottom: 6 },
+   roomLabel: { fontSize: 12, color: "#4F46E5", fontWeight: "500" },
+  roomNumber: { fontSize: 22, fontWeight: "700", color: "#1E40AF", marginTop: 2 },
+  row: { flexDirection: "column", justifyContent: "space-between" },
+  due: { fontSize: 16, fontWeight: "700", color: "#EF4444" },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+  emptyContainer: { alignItems: "center", marginTop: 50 },
+  emptyText: { fontSize: 18, color: "#6B7280" },
 });
 
 export default RentCollectionScreen;
