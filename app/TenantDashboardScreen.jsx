@@ -14,6 +14,7 @@ import axios from "axios";
 import Advertise from "../components/Advertise";
 import SmallAdvertCard from "../components/AdvertCard";
 import { ads } from "../Data/avdert";
+import ElectricityChart from "../components/ElectricChart";
 
 export default function TenantDashboardScreen() {
   const [tenantData, setTenantData] = useState(null);
@@ -71,17 +72,28 @@ export default function TenantDashboardScreen() {
   if (!tenantData) {
     return (
      <View style={styles.emptyContainer}>
-  <Text style={styles.emptyTitle}>
-    আপনার রুম তৈরির জন্য বাড়িওয়ালার অপেক্ষা করুন
-  </Text>
-  <Text style={styles.emptySubtitle}>
-    ততক্ষণে আপনি আমাদের দোকান ঘুরে দেখতে পারেন
-  </Text>
+      {/* Title with gradient */}
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.titleWrapper}
+      >
+        <Text style={styles.emptyTitle}>
+          আপনার রুম তৈরির জন্য{"\n"}বাড়িওয়ালার অপেক্ষা করুন
+        </Text>
+      </LinearGradient>
 
-  <View style={{ marginTop: 20 }}>
-    <Advertise />
-  </View>
-</View>
+      {/* Subtitle */}
+      <Text style={styles.emptySubtitle}>
+        ততক্ষণে আপনি আমাদের দোকান ঘুরে দেখতে পারেন
+      </Text>
+
+      {/* Advertise section */}
+      <View style={styles.advertiseWrapper}>
+        <Advertise />
+      </View>
+    </View>
 
     );
   }
@@ -132,11 +144,11 @@ export default function TenantDashboardScreen() {
     {tenantData.currReading===0? <Text>0</Text>:<Text style={styles.value}>{(tenantData.latestReading || 0) - (tenantData.oldReading || 0)} units</Text>}
   </Text>
   <Text style={styles.label}>
-    ইউনিট মূল্য: <Text style={styles.value}>{tenantData.unitPrice || 0} BDT</Text>
+    ইউনিট মূল্য: <Text style={styles.value}>{tenantData.unitPrice || 0} ৳</Text>
   </Text>
   <Text style={styles.label}>
     মোট বিদ্যুৎ চার্জ: 
-     {tenantData.currReading===0? <Text>0</Text>:<Text style={styles.value}>{electricityCharge} BDT</Text>}
+     {tenantData.currReading===0? <Text>0</Text>:<Text style={styles.value}>{electricityCharge} ৳</Text>}
   </Text>
 </View>
 
@@ -144,15 +156,18 @@ export default function TenantDashboardScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>অন্যান্য বিল</Text>
         <Text style={styles.label}>
-          রুম ভাড়া: <Text style={styles.value}>{tenantData.roomRent || 0} BDT</Text>
+          রুম ভাড়া: <Text style={styles.value}>{tenantData.roomRent || 0} ৳</Text>
         </Text>
-        {tenantData.wifi && (
+     
+        {tenantData.wifi>=0 && (
           <Text style={styles.label}>
-            ওয়াইফাই বিল: <Text style={styles.value}>{tenantData.wifi || 0} BDT</Text>
+            ওয়াইফাই বিল: <Text style={styles.value}>{tenantData.wifi} ৳</Text>
           </Text>
         )}
+     
+       
         <Text style={styles.label}>
-          হাউসকিপিং: <Text style={styles.value}>{tenantData.housekeeping || 0} BDT</Text>
+          পরিষ্কার পরিচ্ছন্নতা : <Text style={styles.value}>{tenantData.housekeeping || 0} ৳</Text>
         </Text>
       </View>
 
@@ -162,18 +177,18 @@ export default function TenantDashboardScreen() {
         style={[styles.card, styles.totalCard]}
       >
         <Text style={styles.cardTitle}>মোট পরিমাণ</Text>
-        <Text style={styles.totalValue}>{tenantData.totalAmount || 0} BDT</Text>
+        <Text style={styles.totalValue}>{tenantData.totalAmount || 0} ৳</Text>
       </LinearGradient>
 
       {/* Payment Status */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>পরিশোধের অবস্থা</Text>
         <Text style={styles.label}>
-          মোট পরিশোধিত: <Text style={[styles.value, styles.paid]}>{tenantData.paidAmount || 0} BDT</Text>
+          মোট পরিশোধিত: <Text style={[styles.value, styles.paid]}>{tenantData.paidAmount || 0} ৳</Text>
         </Text>
-        {/* <Text style={styles.label}>
-          বকেয়া: <Text style={[styles.value, styles.due]}>{tenantData.dueAmount || 0} BDT</Text>
-        </Text> */}
+        <Text style={styles.label}>
+          বকেয়া: <Text style={[styles.value, styles.due]}>{tenantData.currentDue || 0} ৳</Text>
+        </Text>
         <Text style={styles.label}>
           অবস্থা:{" "}
           <Text
@@ -187,14 +202,7 @@ export default function TenantDashboardScreen() {
         </Text>
       </View>
 
-      {/* <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.detailsButton}
-          onPress={() => router.push("/OwnerDetailsScreen")}
-        >
-          <Text style={styles.detailsButtonText}>Owner Details</Text>
-        </TouchableOpacity>
-      </View> */}
+    
        <View style={{ paddingHorizontal: 0 }}>
         {ads.map((item) => (
           <SmallAdvertCard
@@ -206,11 +214,74 @@ export default function TenantDashboardScreen() {
           />
         ))}
       </View>
+      <View>
+
+     <ElectricityChart tenant={tenantData} />
+
+
+      </View>
+       <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: "/RoomListScreen",
+                })
+              }
+          
+              >
+              <LinearGradient colors={["#9046f8ff", "#bb95f1ff"]} style={styles.titleWrapper}>
+                <Text style={styles.cardTitles}>বিজ্ঞাপন রুম</Text>
+                <Text style={styles.cardDesc}>
+                 রুম, বাড়ি ,জমি ও ফ্লাট এর বিজ্ঞাপন
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+      <Text style={styles.branding}>
+        A Product of ptoja.com
+      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  branding:{color:'#9c9c9cff',textAlign:'center', fontSize:12},
+   emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#F9FAFB",
+  },
+  titleWrapper: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+    lineHeight: 32,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  advertiseWrapper: {
+    marginTop: 10,
+    width: "100%",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
+  },
   container: {
     padding: 20,
     backgroundColor: "#F3F4F6",
@@ -220,18 +291,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#6B7280",
-    textAlign: "center",
   },
   headerWrapper: {
     borderRadius: 15,
@@ -291,20 +350,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
   },
-  // detailsButton: {
-  //   backgroundColor: "#6366F1",
-  //   paddingVertical: 16,
-  //   paddingHorizontal: 48,
-  //   borderRadius: 16,
-  //   shadowColor: "#6366F1",
-  //   shadowOpacity: 0.3,
-  //   shadowOffset: { width: 0, height: 6 },
-  //   shadowRadius: 12,
-  //   elevation: 6,
-  // },
+  cardTitles: { fontSize: 20, fontWeight: "700", color: "#fff", marginBottom: 6 },
+  cardDesc: { fontSize: 14, color: "rgba(255,255,255,0.85)" },
+
   detailsButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
   },
+  
 });
+
+
+
+
+  {/* <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.detailsButton}
+          onPress={() => router.push("/OwnerDetailsScreen")}
+        >
+          <Text style={styles.detailsButtonText}>Owner Details</Text>
+        </TouchableOpacity>
+      </View> */}

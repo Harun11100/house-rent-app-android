@@ -8,31 +8,23 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import Advertise from "../components/Advertise";
+import { useLocalSearchParams } from "expo-router/build/hooks";
 
 const OwnerDashboardScreen = () => {
+  const { phone,ownerId } = useLocalSearchParams(); // ✅ Correct hook
   const [ownerData, setOwnerData] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const router = useRouter();
   
   useEffect(() => {
     const fetchOwnerData = async () => {
       try {
-        const storedOwner = await AsyncStorage.getItem("ownerData");
-
-        if (!storedOwner) {
-          setOwnerData(null);
-          return;
-        }
-
-        const parsed = JSON.parse(storedOwner);
 
         const response = await axios.get(
-          `https://house-rent-management-uc5b.vercel.app/api/getOwnerData?phone=${parsed.phone}`
+          `https://house-rent-management-uc5b.vercel.app/api/getOwnerData?phone=${phone}`
         );
 
         if (response.status === 200 && response.data.success) {
@@ -124,20 +116,78 @@ const OwnerDashboardScreen = () => {
           </Text>
         </LinearGradient>
       </TouchableOpacity>
-      
-      <View
-        // style={styles.cardWrapper}
+
+       <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/TotalRentScreen",
+            params: {
+              houseName: ownerData.houseName || "",
+              holdingNumber: ownerData.holdingNumber || "",
+              phone: ownerData.phone || "",
+            },
+          })
+        }
+        style={styles.cardWrapper}
       >
+        <LinearGradient colors={["#a46df7ff", "#ba85f7ff"]} style={styles.card}>
+          <Text style={styles.cardTitle}>ভাড়ার মোট পরিমাণ</Text>
+          <Text style={styles.cardDesc}>
+            আপনার সর্বমোট মাসিক ভারা ও বিদ্যুৎ বিল দেখুন
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/RoomUploadScreen",
+            params: {
+              houseName: ownerData.houseName || "",
+              holdingNumber: ownerData.holdingNumber || "",
+              phone: ownerData.phone || "",
+              ownerId:ownerData._id || "",
+            },
+          })
+        }
+        style={styles.cardWrapper}
+      >
+        <LinearGradient colors={["#313ba5ff", "#270bc6ff"]} style={styles.card}>
+          <Text style={styles.cardTitle}>বিজ্ঞাপন ফর্ম </Text>
+          <Text style={styles.cardDesc}>
+            আপনার এলাকাতে রুমের বিজ্ঞাপন দিন
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
+       <View>
        <Advertise/> 
       </View>
+        <TouchableOpacity
+        onPress={() =>
+          router.push({
+            pathname: "/RoomListScreen",
+          })
+        }
+        style={styles.cardWrapper}
+        >
+        <LinearGradient colors={["#39bca4ff", "#0b91c6ff"]} style={styles.card}>
+          <Text style={styles.cardTitle}>বিজ্ঞাপন রুম</Text>
+          <Text style={styles.cardDesc}>
+            আপনার রুমের বিজ্ঞাপন 
+          </Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+     
       
+      <Text style={styles.branding}>A Product of ptoja.com</Text>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40, backgroundColor: "#F3F4F6" },
-  header: { fontSize: 28, fontWeight: "700", color: "#fa812bff", textAlign: "center", marginBottom: 25 },
+  container: { padding: 20, paddingBottom: 10, backgroundColor: "#F3F4F6" },
+  header: { fontSize: 28, fontWeight: "700", color: "#6720ffff", textAlign: "center", marginBottom: 25 },
   cardWrapper: { marginBottom: 15,
     borderRadius: 16,
     shadowColor: "#000",
@@ -154,6 +204,7 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 14, color: "rgba(255,255,255,0.85)" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
   emptyText: { fontSize: 18, textAlign: "center", color: "#111827" },
+  branding:{color:'#9c9c9cff',textAlign:'center', fontSize:12}
 });
 
 export default OwnerDashboardScreen;

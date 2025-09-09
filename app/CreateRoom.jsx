@@ -76,7 +76,7 @@ const submitRoomData = async (values) => {
     let data = text ? JSON.parse(text) : {};
 
     if (res.ok) {
-      Alert.alert("সফল হয়েছে", "Room created successfully!");
+      Alert.alert("সফল হয়েছে", "আপনার রুম তৈরি করা হয়েছে!");
       router.back();
     } else {
       Alert.alert("ত্রুটি", data.message || "Something went wrong");

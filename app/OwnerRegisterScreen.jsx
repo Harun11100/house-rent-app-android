@@ -35,33 +35,25 @@ export default function OwnerRegisterScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkOwnerSession = async () => {
-      const storedOwner = await AsyncStorage.getItem("ownerData");
-      if (storedOwner) {
-        router.replace("/OwnerDashboardScreen"); // redirect if already logged in
-      }
-    };
-    checkOwnerSession();
-  }, []);
+
 
   const onFormSubmit = async (values, { resetForm }) => {
     setLoading(true);
     try {
-      console.log("রেজিস্টার ডেটা:", values);
+      // console.log("রেজিস্টার ডেটা:", values);
 
       const res = await axios.post(
         "https://house-rent-management-uc5b.vercel.app/api/owner/register",
         values
       );
 
-      console.log("সার্ভার থেকে রেসপন্স:", res.data);
-      await AsyncStorage.setItem("ownerData", JSON.stringify(res.data.owner));
-
-      // Alert.alert("সফল", "ভাড়াটিয়া সফলভাবে রেজিস্টার হয়েছে!");
       resetForm();
 
-      router.push("/OwnerDashboardScreen"); // navigate to dashboard
+      // router.push("/OwnerDashboardScreen");
+      router.push(
+        `/OwnerDashboardScreen?phone=${res.data.owner.phone}&ownerName=${res.data.owner.ownerName}&houseName=${res.data.owner.houseName}`
+      );
+
     } catch (error) {
       console.error("Owner registration error:", error.response || error);
       Alert.alert(
@@ -75,12 +67,6 @@ export default function OwnerRegisterScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()} // go back
-      >
-        <Text style={styles.backText}>পেছনে</Text>
-      </TouchableOpacity>
 
       <Text style={styles.title}>বাড়িওয়ালার রেজিস্ট্রেশন</Text>
 
@@ -207,17 +193,6 @@ export default function OwnerRegisterScreen() {
 
         )}
       </Formik>
-        <View style={{ paddingHorizontal: 0 }}>
-            {adverts.map((item) => (
-              <SmallAdvertCard
-                key={item.id}
-                logo={item.logo}
-                image={item.image}
-                title={item.title}
-                link={item.link}
-              />
-            ))}
-          </View>
     </ScrollView>
   );
 }
@@ -239,7 +214,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "bold",
     marginBottom: 25,
-    color: "#111827",
+    color: "#4f66edff",
     textAlign: "center",
   },
   form: {

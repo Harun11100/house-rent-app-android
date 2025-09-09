@@ -63,7 +63,7 @@ export default function ChooseRoleScreen() {
 
 
       <Image style={styles.img} source={require('../assets/icons/house.png')} />
-      <Text style={styles.subtitle}>নিবন্ধন করুন:</Text>
+      <Text style={styles.stitle}>নিবন্ধন করুন:</Text>
 
       {/* Role Cards */}
       <TouchableOpacity
@@ -102,6 +102,21 @@ export default function ChooseRoleScreen() {
           <Text style={styles.benefitsText}>অ্যাপের সুবিধা দেখুন</Text>
         </LinearGradient>
       </TouchableOpacity>
+
+      <View style={{ alignItems: "center", marginVertical: 30 }}>
+        <Text style={styles.guideText}>
+          কিভাবে ব্যবহার করবেন ? জানতে নিচের বাটনে ক্লিক করুন
+        </Text>
+
+        <TouchableOpacity style={styles.guideBtn}
+         onPress={() =>
+          router.push({
+            pathname: "/GuideScreen",
+          })       
+        }>
+          <Text style={styles.guideBtnText}>ব্যবহারবিধি</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -120,6 +135,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#374151",
     marginBottom: 10,
+  },
+   stitle: {
+    fontSize: 20,
+    textAlign: "center",
+    color: "#374151",
+    marginBottom: 10,
+    fontWeight:600
   },
   title: {
     fontSize: 28,
@@ -172,5 +194,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#fff",
+  },
+  guideText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#374151",
+    marginBottom:10,
+    textAlign: "center",
+  },
+  guideBtn: {
+    backgroundColor: "#6366F1",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  guideBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

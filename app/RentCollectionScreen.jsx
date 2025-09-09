@@ -43,15 +43,16 @@ const RentCollectionScreen = () => {
     let dueSum = 0;
 
     tenants.forEach((t) => {
-      const paidAmount = Number(t.paidAmount ?? 0);
-      const roomRent = Number(t.roomRent ?? 0);
+      const paidAmount = Number(t.currentPaid ?? 0);
+      const currentDue = Number(t.currentDue ?? 0);
 
       amountSum += paidAmount;
-      dueSum += roomRent - paidAmount;
+      dueSum += currentDue;
     });
 
     setTotalAmount(amountSum);
     setTotalDue(dueSum);
+    
   }, [tenants]);
 
   const renderTenant = ({ item }) => (
@@ -59,8 +60,8 @@ const RentCollectionScreen = () => {
       
       <View style={styles.row}>
         <Text style={styles.name}>{item.tenant?.name || "নাম নেই"}</Text>
-        <Text style={styles.amount}>মোট: {item.paidAmount ?? 0} BDT</Text>
-       <Text style={styles.due}>বাকি: {(item.roomRent ?? 0) - (item.paidAmount ?? 0)} BDT</Text>
+        <Text style={styles.amount}>মোট: {item.monthlyTotal} BDT</Text>
+       <Text style={styles.due}>বাকি: {item.currentDue} BDT</Text>
       </View>
     
         <View style={styles.roomContainer} >
@@ -83,7 +84,7 @@ const RentCollectionScreen = () => {
     <LinearGradient colors={["#F3F4F6", "#EDE9FE"]} style={styles.container}>
       <Text style={styles.header}>ভাড়া সংগ্রহ</Text>
 
-     <LinearGradient colors={["#12cec5ff", "#34d3abff"]} style={styles.summaryCard}>
+      <LinearGradient colors={["#1037b9ff", "#8334d3ff"]} style={styles.summaryCard}>
         <Text style={styles.summaryText}>মোট পরিশোধিত: {totalAmount} BDT</Text>
         <Text style={styles.summaryTextDue}>মোট বাকি: {totalDue} BDT</Text>
       </LinearGradient>
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
   summaryCard: {
     marginLeft:5,
     marginRight:5,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
     marginBottom: 20,
     shadowColor: "#4F46E5",

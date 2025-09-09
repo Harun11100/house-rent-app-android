@@ -47,22 +47,27 @@ const TenantFormScreen = () => {
     paidAmount: Yup.number().required("পরিশোধিত পরিমাণ অবশ্যক").typeError("সঠিক সংখ্যা দিন"),
   });
 
-  const calculateElectricity = (prev, curr, unit) => {
-    const prevNum = parseFloat(prev) || 0;
-    const currNum = parseFloat(curr) || 0;
-    const unitNum = parseFloat(unit) || 0;
-    if (currNum <= prevNum) return 0;
-    return (currNum - prevNum) * unitNum;
-  };
+ const calculateElectricity = (prev, curr, unit) => {
+  const prevNum = parseFloat(prev) || 0;
+  const currNum = parseFloat(curr) || 0;
+  const unitNum = parseFloat(unit) || 0;
 
-    const calculateTotal = ({ roomRent, electricity, wifi, housekeeping, paidAmount }) => {
-    const total =
-      parseFloat(roomRent || 0) +
-      parseFloat(electricity || 0) +
-      parseFloat(wifi || 0) +
-      parseFloat(housekeeping || 0);
-    return { total, due: total - parseFloat(paidAmount || 0) };
-  };
+  if (currNum <= prevNum) return 0;
+  return (currNum - prevNum) * unitNum;
+};
+
+  const calculateTotal = ({ roomRent, electricity, wifi, housekeeping, paidAmount }) => {
+  const total =
+    parseFloat(roomRent || 0) +
+    parseFloat(electricity || 0) +
+    parseFloat(wifi || 0) +
+    parseFloat(housekeeping || 0);
+
+  // Ensure paidAmount is not greater than total
+  const validPaidAmount = Math.min(parseFloat(paidAmount || 0), total);
+
+  return { total, due: total - validPaidAmount };
+};
 
 
 
@@ -88,7 +93,6 @@ const submitTenantData = async (values) => {
     tenantId: tenant?._id,
   };
 
-  console.log("Payload submitted:", payload);
 
   // Confirm before submission
   Alert.alert(
@@ -117,7 +121,7 @@ const submitTenantData = async (values) => {
             if (res.ok) {
               Alert.alert(
                 "সফল হয়েছে",
-                `Tenant "${values.tenant.name}" updated successfully!\nTotal: ${total} BDT\nDue: ${due} BDT`
+                `ভাড়াটিয়া "${values.tenant.name}" এর তথ্য আপডেট হয়েছে এবং তার কাছে পৌঁছে দেয়া হয়েছে ! \nTotal: ${total} BDT\nDue: ${due} BDT`
               );
               router.back();
             } else {
@@ -169,14 +173,14 @@ const submitTenantData = async (values) => {
             paidAmount: values.paidAmount,
           });
 
-          const renderInput = (path, label, keyboard = "default") => (
+         const renderInput = (path, label, keyboard = "default", customOnChange) => (
             <View key={path} style={{ marginBottom: 12 }}>
               <Text style={styles.label}>{label}</Text>
               <TextInput
                 style={styles.input}
                 value={get(values, path)?.toString() || ""}
                 keyboardType={keyboard}
-                onChangeText={(val) => setFieldValue(path, val)}
+                onChangeText={customOnChange || ((val) => setFieldValue(path, val))}
                 onBlur={handleBlur(path)}
               />
               {get(errors, path) && get(touched, path) && <Text style={styles.error}>{get(errors, path)}</Text>}
@@ -186,7 +190,7 @@ const submitTenantData = async (values) => {
   const handleClearTenant = () => {
   Alert.alert(
    "নিশ্চিতকরণ",
-"আপনি কি ভাড়াটিয়ার নাম এবং ফোন মুছে দিতে চান? তাহলে ভাড়াটিয়া আর এই বিলের তথ্য দেখতে পারবে না।",
+  "আপনি কি ভাড়াটিয়ার নাম এবং ফোন মুছে দিতে চান? তাহলে ভাড়াটিয়া আর এই বিলের তথ্য দেখতে পারবে না।",
     [
       {
         text: "বাতিল করুন",
@@ -227,10 +231,18 @@ const submitTenantData = async (values) => {
 
 
 
-
-     const changeStatus = (newStatus) => {
+const changeStatus = (newStatus) => {
   if (!tenant?._id) {
     Alert.alert("ত্রুটি", "Tenant ID is missing");
+    return;
+  }
+
+  // ✅ Validate electricity meter readings
+  if (parseFloat(values.currReading) <= parseFloat(values.prevReading)) {
+    Alert.alert(
+      "ত্রুটি",
+      "বর্তমান রিডিং অবশ্যই পূর্ববর্তী রিডিং এর থেকে বেশি হতে হবে।"
+    );
     return;
   }
 
@@ -244,12 +256,34 @@ const submitTenantData = async (values) => {
         text: "হ্যাঁ",
         onPress: async () => {
           try {
+            const electricityCharge = calculateElectricity(
+              values.prevReading,
+              values.currReading,
+              values.unitPrice
+            );
+
+            const monthlyTotal =
+              parseFloat(values.roomRent || 0) +
+              electricityCharge +
+              parseFloat(values.wifi || 0) +
+              parseFloat(values.housekeeping || 0);
+
+            const currentPaid = parseFloat(values.paidAmount || 0);
+            const currentDue = monthlyTotal - currentPaid;
+
             const res = await fetch(
               "https://house-rent-management-uc5b.vercel.app/api/owner/statusUpdate",
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tenantId: tenant._id, status: newStatus }),
+                body: JSON.stringify({
+                  tenantId: tenant._id,
+                  status: newStatus,
+                  currentDue,
+                  currentPaid,
+                  monthlyTotal,
+                  monthlyElectricityBill: electricityCharge,
+                }),
               }
             );
 
@@ -325,7 +359,12 @@ const submitTenantData = async (values) => {
               {/* Payment */}
               <View style={styles.card}>
                 <Text style={styles.groupTitle}>পেমেন্ট</Text>
-                {renderInput("paidAmount", "পরিশোধিত পরিমাণ (BDT)", "numeric")}
+                  {renderInput("paidAmount", "পরিশোধিত পরিমাণ (BDT)", "numeric", (val) => {
+                  const numVal = parseFloat(val) || 0;
+                  const electricity = calculateElectricity(values.prevReading, values.currReading, values.unitPrice);
+                  const total = parseFloat(values.roomRent || 0) + electricity + parseFloat(values.wifi || 0) + parseFloat(values.housekeeping || 0);
+                  setFieldValue("paidAmount", numVal > total ? total : numVal);
+                })}
                 <Text style={styles.totalLabel}>মোট বিল: {total.toFixed(2)} BDT</Text>
                 <Text style={styles.dueLabel}>বাকি: {due.toFixed(2)} BDT</Text>
                 <Text style={{ marginTop: 10, fontSize: 16 }}>বর্তমান অবস্থা: {values.status}</Text>
@@ -345,13 +384,15 @@ const submitTenantData = async (values) => {
               <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
                 <Text style={styles.saveButtonText}>সংরক্ষণ করুন</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleClearTenant}
-              activeOpacity={0.8} // smooth press effect
-            >
-              <Text style={styles.deleteButtonText}>❌ নাম ও ফোন নাম্বার মুছুন</Text>
-            </TouchableOpacity>
+              <View style={styles.btnContainer}>
+              <Text style={styles.removeText}>
+                ভাড়াটিয়ার নাম ও ফোন নাম্বার মুছতে এবং নতুন ভাড়াটিয়া প্রতিস্থাপন করতে এখানে ক্লিক করুন
+              </Text>
+
+              <TouchableOpacity style={styles.replaceBtn} onPress={handleClearTenant} activeOpacity={0.8}>
+                <Text style={styles.replaceBtnText}>প্রতিস্থাপন</Text>
+              </TouchableOpacity>
+            </View>
             </View>
           );
         }}
@@ -361,7 +402,7 @@ const submitTenantData = async (values) => {
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: "#F9FAFB", paddingBottom: 50 },
+  container: { padding: 20, backgroundColor: "#F9FAFB", paddingBottom: 30 },
   fixedValue: { backgroundColor: "#f0f0f0", borderWidth: 1, borderColor: "#e0e0e0", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#555" },
   header: { fontSize: 26, fontWeight: "800", marginBottom: 20, textAlign: "center", color: "#307ae1ff" },
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, marginVertical: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 4 },
@@ -378,16 +419,18 @@ const styles = StyleSheet.create({
   statusButtonText: { color: "#fff", fontSize: 16, fontWeight: "700", letterSpacing: 0.5 },
   saveButton: { backgroundColor: "#4F46E5", padding: 16, borderRadius: 14, alignItems: "center", shadowColor: "#4F46E5", shadowOpacity: 0.2, shadowOffset: { width: 0, height: 4 }, shadowRadius: 6, elevation: 5 },
   saveButtonText: { color: "#fff", fontSize: 17, fontWeight: "700", letterSpacing: 0.5 },
-  deleteButton: {
-   
-    marginTop:28,
-    marginVertical:10,
-    marginHorizontal:10,
-
-    
+   btnContainer: {
+    marginTop: 20,
+    padding:5,
   },
-  deleteButtonText: {
-    color: "#555252ff",
+  removeText: {
+    fontSize: 12,
+    color: "#374151",
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  replaceBtnText: {
+    color: "#2826b5ff",
     fontSize: 16,
     fontWeight: "600",
   },

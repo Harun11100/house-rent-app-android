@@ -14,10 +14,9 @@ import * as Yup from "yup";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { adverts } from "../Data/avdert";
 import SmallAdvertCard from "../components/AdvertCard";
+import { adverts } from "../Data/avdert";
 
-// Validation schema
 const validationSchema = Yup.object().shape({
   phone: Yup.string()
     .matches(/^[0-9]{11}$/, "Phone number must be 11 digits")
@@ -28,19 +27,18 @@ const validationSchema = Yup.object().shape({
 export default function TenantLoginScreen() {
   const [loading, setLoading] = useState(false);
   const [checkingStorage, setCheckingStorage] = useState(true);
+  const [saveLogin, setSaveLogin] = useState(false); // track save login toggle
 
   const router = useRouter();
 
-  // ✅ Check AsyncStorage on mount
   useEffect(() => {
     const checkStoredTenant = async () => {
       try {
         const storedTenant = await AsyncStorage.getItem("tenantData");
         if (storedTenant) {
           const { phone } = JSON.parse(storedTenant);
-          console.log("Stored tenant phone:", phone);
           router.push(`/TenantDashboardScreen?phone=${phone}`);
-          return; // Prevent further rendering
+          return;
         }
       } catch (error) {
         console.error("Error reading AsyncStorage:", error);
@@ -50,6 +48,23 @@ export default function TenantLoginScreen() {
     };
     checkStoredTenant();
   }, []);
+
+  const handleSaveLogin = async (values) => {
+    try {
+      await AsyncStorage.setItem(
+        "tenantData",
+        JSON.stringify({
+          phone: values.phone.trim(),
+          roomNumber: values.roomNumber.trim(),
+        })
+      );
+      Alert.alert("সফল হয়েছে", "লগইন তথ্য সংরক্ষণ করা হয়েছে।");
+      setSaveLogin(true);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("ত্রুটি", "তথ্য সংরক্ষণ করা যায়নি।");
+    }
+  };
 
   const onFormSubmit = async (values) => {
     setLoading(true);
@@ -64,20 +79,13 @@ export default function TenantLoginScreen() {
         payload
       );
 
-      console.log("Login response:", res.data);
-
-      // Save tenant info in AsyncStorage
-      await AsyncStorage.setItem(
-        "tenantData",
-        JSON.stringify({
-          phone: res.data.tenant.phone,
-          roomNumber: res.data.tenant.roomNumber,
-        })
-      );
-
       Alert.alert("সফল", "লগইন সফল হয়েছে!");
 
-      // Navigate to dashboard
+      // Only save login if user clicked "Save Login Info"
+      if (saveLogin) {
+        await handleSaveLogin(values);
+      }
+
       router.push(`/TenantDashboardScreen?phone=${res.data.tenant.phone}`);
     } catch (error) {
       console.error("Tenant login error:", error.response?.data || error.message || error);
@@ -138,6 +146,18 @@ export default function TenantLoginScreen() {
               )}
             </View>
 
+            {/* Save Login Info Button */}
+            <View style={styles.wrapper}>
+              <TouchableOpacity
+                style={styles.saveButton}
+                activeOpacity={0.8}
+                onPress={() => handleSaveLogin(values)}
+              >
+                <Text style={styles.text}>সংরক্ষণ করুন</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Login Button */}
             <TouchableOpacity
               style={styles.submitButton}
               onPress={handleSubmit}
@@ -152,40 +172,35 @@ export default function TenantLoginScreen() {
           </View>
         )}
       </Formik>
-        <View style={{ paddingHorizontal: 0 }}>
-                  {adverts.map((item) => (
-                    <SmallAdvertCard
-                      key={item.id}
-                      logo={item.logo}
-                      image={item.image}
-                      title={item.title}
-                      link={item.link}
-                    />
-                  ))}
-                </View>
+       <View style={{ paddingHorizontal: 0 }}>
+            {adverts.map((item) => (
+              <SmallAdvertCard
+                key={item.id}
+                logo={item.logo}
+                image={item.image}
+                title={item.title}
+                link={item.link}
+              />
+            ))}
+          </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: "#F3F4F6",
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  label: {
-  fontSize: 16,
-  fontWeight: "600",
-  color: "#374151", // modern dark gray
-  marginBottom: 4,
-  letterSpacing: 0.5,
-},
+  container: { padding: 20, backgroundColor: "#F3F4F6", flexGrow: 1, justifyContent: "center" },
+  label: { fontSize: 16, fontWeight: "600", color: "#374151", marginBottom: 4 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 26, fontWeight: "bold", marginBottom: 25, color: "#111827", textAlign: "center" },
+  title: { fontSize: 26, fontWeight: "bold", marginBottom: 25, color: "#4f66edff", textAlign: "center" },
   form: { flex: 1 },
   input: { borderWidth: 1, borderColor: "#D1D5DB", padding: 12, borderRadius: 12, backgroundColor: "#fff", fontSize: 16 },
   error: { color: "#EF4444", fontSize: 13, marginTop: 4 },
+  wrapper: { marginTop: 10, alignItems: "end" },
+    
+  saveButton: { color:'#fff', paddingVertical: 0, paddingHorizontal: 5, borderRadius: 12 },
+
+  button: { backgroundColor: "#6366F1", paddingVertical: 14, paddingHorizontal: 28, borderRadius: 12 },
+  text: { color: "#6d6d6dff", fontSize: 16, fontWeight: "700", textAlign: "center" },
   submitButton: { marginTop: 20, backgroundColor: "#6366F1", padding: 15, borderRadius: 12, alignItems: "center" },
   submitText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 });
